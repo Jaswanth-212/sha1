@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SHA-1 (browser built-in)</title>
+  <style>
+    :root{--bg:#f9fafb; --card:#fff; --ink:#111827; --muted:#6b7280; --primary:#2563eb}
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); padding:16px; display:flex; justify-content:center}
+    .card{width:100%; max-width:420px; background:var(--card); border-radius:12px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+    h1{font-size:18px; margin:0 0 12px 0; color:var(--ink)}
+    label{font-size:13px; color:var(--muted); display:block; margin-bottom:6px}
+    textarea{width:100%; min-height:110px; padding:12px; border-radius:10px; border:1px solid #e5e7eb; font-size:14px; resize:vertical}
+    .row{display:flex; gap:8px; margin-top:12px}
+    button{flex:1; padding:12px; border-radius:10px; border:none; background:var(--primary); color:#fff; font-weight:600; cursor:pointer}
+    button.secondary{background:#eef2ff; color:#1e3a8a}
+    .output{margin-top:12px; padding:12px; border-radius:10px; background:#f3f4f6; border:1px solid #e5e7eb; font-family:monospace; word-break:break-all}
+    .small{font-size:12px; color:var(--muted); margin-top:8px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>SHA-1 (browser built-in)</h1>
+    <label for="inputText">Input text</label>
+    <textarea id="inputText" placeholder="Type text to hash"></textarea>
+
+    <div class="row">
+      <button id="hashBtn">Compute SHA-1</button>
+      <button id="clearBtn" class="secondary">Clear</button>
+    </div>
+
+    <div id="result" class="output">Hash will appear here</div>
+    <div class="row" style="margin-top:10px">
+      <button id="copyBtn" class="secondary">Copy</button>
+      <button id="fromFileBtn" class="secondary">Hash File</button>
+    </div>
+
+    <input id="fileInput" type="file" accept="*/*" style="display:none" />
+    <div class="small">Uses Web Crypto API: crypto.subtle.digest('SHA-1', ...). Works in modern browsers on secure origins.</div>
+  </main>
+
+  <script>
+    const input = document.getElementById('inputText');
+    const hashBtn = document.getElementById('hashBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const result = document.getElementById('result');
+    const copyBtn = document.getElementById('copyBtn');
+    const fromFileBtn = document.getElementById('fromFileBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    async function sha1FromBuffer(buffer) {
+      // buffer: ArrayBuffer
+      const digest = await crypto.subtle.digest('SHA-1', buffer);
+      const bytes = new Uint8Array(digest);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    hashBtn.addEventListener('click', async () => {
+      const text = input.value || '';
+      try {
+        const enc = new TextEncoder();
+        const hex = await sha1FromBuffer(enc.encode(text));
+        result.textContent = hex;
+      } catch (e) {
+        result.textContent = 'Error computing hash';
+        console.error(e);
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      result.textContent = 'Hash will appear here';
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const txt = result.textContent || '';
+      try {
+        await navigator.clipboard.writeText(txt);
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1200);
+      } catch (e) {
+        alert('Unable to copy');
+      }
+    });
+
+    fromFileBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        const buffer = await f.arrayBuffer();
+        const hex = await sha1FromBuffer(buffer);
+        result.textContent = hex;
+      } catch (err) {
+        result.textContent = 'Error reading file';
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
